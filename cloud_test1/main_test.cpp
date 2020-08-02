@@ -1,36 +1,55 @@
 #include <iostream>
 #include <string>
-#include <fstream>
 #include <vector>
-#include <stdlib.h>
+#include <opencv2/core.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/highgui.hpp>
 #include "randnum.h"
+#include "dataFile.h"
+using namespace cv;
 using namespace std;
 
+//#define TESTOPENCV
 
-int main() {
+int main(int argc, char** argv) {
 
-	string Path = "";
-	string filename = "indicesData";
-	string filetype = ".txt";
-	ofstream findicesData;
-
-	string fid = Path.append(filename.append(filetype));
-	findicesData.open(fid, ios::out | ios::trunc); // create if not exist and clear all if exist
-	
-	string indexName;
-	vector<double> indicesData;
-	indexName = "距离检测结果";
-    indicesData = indicesDataGeneration(5.0, 0.05, 10);
-	
-	findicesData << indexName << "(参考值"<< 5.0 <<"): ";
-	for (vector<double>::iterator it= indicesData.begin(); it != indicesData.end(); it++) {
-		findicesData << *it << " ";
+#ifdef TESTOPENCV
+	string Path = "C:\\Users\\lgd\\Pictures\\Camera Roll\\";
+	string filename = "bili_img_86334786.jpg";
+	Mat image;
+	image = imread(Path.append(filename), IMREAD_COLOR); // Read the file
+	if (image.empty()) // Check for invalid input
+	{
+		cout << "Could not open or find the image" << std::endl;
+		return -1;
 	}
-	findicesData << "\n";
+	namedWindow("Display window", WINDOW_AUTOSIZE); // Create a window for display.
+	imshow("Display window", image); // Show our image inside it.
+	waitKey(0); // Wait for a keystroke in the window
+#endif // TESTOPENCV
 
 
 
-	findicesData.close();
+	//dataWrite();
 
-	return 0;
+	vector<vector<string>> IndexName;
+	vector<vector<double>> IndicesData;
+	vector<double> refeData;
+	vector<double> EMS;
+
+	vector<vector<string>>& idn = IndexName;
+	vector<vector<double>>& idD = IndicesData;
+	vector<double>& reD = refeData;
+	vector<double>& ems = EMS;
+
+	if (!dataRead(idn, idD, reD, ems)) {
+		cout << "Please check filename" << endl;
+		return 0;
+	}
+		
+	
+
+
+	return 0; // free all vectors after run this code
+
 }
