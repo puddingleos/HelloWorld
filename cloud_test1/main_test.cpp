@@ -1,12 +1,12 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <opencv2/core.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/highgui.hpp>
+//#include <opencv2/core.hpp>
+//#include <opencv2/imgcodecs.hpp>
+//#include <opencv2/highgui.hpp>
 #include "randnum.h"
 #include "dataFile.h"
-using namespace cv;
+//using namespace cv;
 using namespace std;
 
 //#define TESTOPENCV
@@ -30,23 +30,23 @@ int main(int argc, char** argv) {
 
 
 
-	//dataWrite();
+	dataWrite();
 
-	vector<vector<string>> IndexName;
-	vector<vector<double>> IndicesData;
-	vector<double> refeData;
-	vector<double> EMS;
+	//vector<vector<string>> IndexName;
+	//vector<vector<double>> IndicesData;
+	//vector<double> refeData;
+	//vector<double> EMS;
 
-	vector<vector<string>>& idn = IndexName;
-	vector<vector<double>>& idD = IndicesData;
-	vector<double>& reD = refeData;
-	vector<double>& ems = EMS;
+	//vector<vector<string>>& idn = IndexName;
+	//vector<vector<double>>& idD = IndicesData;
+	//vector<double>& reD = refeData;
+	//vector<double>& ems = EMS;
 
-	if (!dataRead(idn, idD, reD, ems)) {
-		cout << "Please check filename" << endl;
-		return 0;
-	}
-		
+	//if (!dataRead(idn, idD, reD, ems)) {
+	//	cout << "Please check filename" << endl;
+	//	return 0;
+	//}
+	//	
 	
 
 
