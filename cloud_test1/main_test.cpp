@@ -28,27 +28,29 @@ int main(int argc, char** argv) {
 	waitKey(0); // Wait for a keystroke in the window
 #endif // TESTOPENCV
 
+	int x[4] = { 0 };
+	int y[4] = { 1 };
 
-
+	// 写入文件
 	dataWrite();
 
-	//vector<vector<string>> IndexName;
-	//vector<vector<double>> IndicesData;
-	//vector<double> refeData;
-	//vector<double> EMS;
+	//读取文件
+	vector<vector<string>> IndexName;
+	vector<vector<double>> IndicesData;
+	vector<double> refeData;
+	vector<double> EMS;
 
-	//vector<vector<string>>& idn = IndexName;
-	//vector<vector<double>>& idD = IndicesData;
-	//vector<double>& reD = refeData;
-	//vector<double>& ems = EMS;
+	vector<vector<string>>& idn = IndexName;//传递vector的引用
+	vector<vector<double>>& idD = IndicesData;
+	vector<double>& reD = refeData;
+	vector<double>& ems = EMS;
 
-	//if (!dataRead(idn, idD, reD, ems)) {
-	//	cout << "Please check filename" << endl;
-	//	return 0;
-	//}
-	//	
+	if (!dataRead(idn, idD, reD, ems)) {
+		cout << "Please check filename" << endl;
+		return 0;
+	}
+		
 	
-
 
 	return 0; // free all vectors after run this code
 

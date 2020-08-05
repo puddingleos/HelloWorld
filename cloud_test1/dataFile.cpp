@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -9,51 +10,105 @@
 using namespace std;
 
 bool dataWrite() {
-	// verification to write
-	string tag;
-	cout << "Please Enter (yes) to begin the write:";
-	cin >> tag;
-	if (tag.compare("yes") != 0)
-		return false;
-
 	string Path = "";
-	string filename = "indicesData";
+	string filename;
 	string filetype = ".txt";
+	string configFiletype = ".cfg";
 	ofstream findicesData;
-	cout << "Filename(\"indicesData\" as default): ";
+
+	cout << "Please enter the fileName(indicesData): ";
 	cin >> filename;
 
-	string fid = Path.append(filename.append(filetype));
+	//参数文件
+	string fid = "";
+	fid.append(Path);
+	fid.append(filename);
+	fid.append(filetype);
 	findicesData.open(fid, ios::out | ios::trunc); // create if not exist and clear all if exist
+	
+	//配置文件（保存本次参数）
+	string fid2 = "";
+	fid2.append(Path);
+	fid2.append(filename);
+	fid2.append(configFiletype);
+	
 
+	
 	int indexNum = 0;
 	string indexName;
-	double EMS = 0;
-	double refeData = 0;
-	int dataLength = 0;
+	double EMS = NULL;
+	double refeData = NULL;
+	int dataLength = NULL;
 	vector<double> indicesData;
 
-	cout << "Please enter the number of indicators: ";
-	cin >> indexNum;
-	while (indexNum--) {
-		cout << "There're " << indexNum + 1 << " indices to enter.\n";
-		cout << "Please enter the name of indices:";
-		cin >> indexName;
-		cout << "Please enter the reference, EMS and number of data:";
-		cin >> refeData >> EMS >> dataLength;
-
-		indicesData = indicesDataGeneration(refeData, EMS, dataLength);
-
-		findicesData << indexName << "(参考值" << refeData << ",均方根" << EMS << ",数据数量" << dataLength << "): ";
-		for (vector<double>::iterator it = indicesData.begin(); it != indicesData.end(); it++) {
-			findicesData << *it << " ";
-		}
-		findicesData << "\n";
-
-		cout << endl;
+	// 判断是否选择上一次配置文件
+	string tag;
+	cout << "If you use the latest saved config (yes/no): ";
+	cin >> tag;
+	while (tag.compare("yes") && tag.compare("no")) {
+		tag.clear();
+		cout << "Please enter yes or no: ";
+		cin >> tag;
 	}
+	if (!tag.compare("yes")) {
+		ifstream configFile;
+		configFile.open(fid2, ios::out);
+		if (!configFile.is_open()) {
+			cout << "config file is not exist." << endl;
+			return false;
+		}
+		string tmp;
+		while (getline(configFile, tmp)) {
+			char *splitChar = strtok(const_cast<char*>(tmp.c_str()), " ");
+			while (*splitChar != 0) {
+				indexName.push_back(*splitChar);//指标名称
+				splitChar++;
+			}
+			splitChar = strtok(NULL, " ");
+			refeData = atof(splitChar);//参考值
+			splitChar = strtok(NULL, " ");
+			EMS = atof(splitChar);// 均方根
+			splitChar = strtok(NULL, " ");
+			dataLength = stoi(splitChar);//数据数量
 
-	findicesData.close();
+			indicesData = indicesDataGeneration(refeData, EMS, dataLength);
+			findicesData << indexName << "(参考值" << refeData << ",均方根" << EMS << ",数据数量" << dataLength << "): ";//写入数据
+			for (vector<double>::iterator it = indicesData.begin(); it != indicesData.end(); it++) {
+				findicesData << *it << " ";
+			}
+			indexName.clear();
+			findicesData << "\n";
+
+		}
+		findicesData.close();
+		configFile.close();
+		cout << "files rewrite over." << endl;
+	}
+	else {
+		ofstream configFile;
+		configFile.open(fid2, ios::in | ios::trunc);//重新生成配置文件，以截断形式打开重名文件
+		cout << "Please enter the number of indicators: ";
+		cin >> indexNum;
+		while (indexNum) {
+			cout << "There're " << indexNum << " indices to enter.\n";
+			cout << "Please enter the name of indices, reference, EMS and number of data:";
+			cin >> indexName >> refeData >> EMS >> dataLength;
+
+			indicesData = indicesDataGeneration(refeData, EMS, dataLength);
+			configFile << indexName << " " << refeData << " " << EMS << " " << dataLength << "\n";//写入配置文件
+			findicesData << indexName << "(参考值" << refeData << ",均方根" << EMS << ",数据数量" << dataLength << "): ";//写入数据
+			for (vector<double>::iterator it = indicesData.begin(); it != indicesData.end(); it++) {
+				findicesData << *it << " ";
+			}
+			findicesData << "\n";
+			indexNum--;
+			cout << endl;
+		}
+
+		findicesData.close();
+		configFile.close();
+	}
+	
 
 	return true;
 }
