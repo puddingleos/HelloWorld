@@ -3,8 +3,9 @@
 #include <vector>
 using namespace std;
 
+#ifndef PI
 #define PI 3.1415926
-
+#endif
 class parameters {
 public:
     long long fc;

@@ -337,8 +337,8 @@ PyObject* get_array(const std::vector<Numeric>& v)
         PyArray_UpdateFlags(reinterpret_cast<PyArrayObject*>(varray), NPY_ARRAY_OWNDATA);
         return varray;
     }
-    
-    PyObject* varray = PyArray_SimpleNewFromData(1, &vsize, type, (void*)(v.data()));
+    PyObject* varray =  PyArray_SimpleNewFromData(1, &vsize, type, (void*)(v.data()));
+       
     return varray;
 }
 

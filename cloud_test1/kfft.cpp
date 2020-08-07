@@ -2,11 +2,16 @@
 #include <math.h>
 #include <vector>
 #include <complex>
+#include "matplotlibcpp.h"
 #include "matprocess.h"
 #include "parameter.h"
 
-#define PI 3.1415926
+
+#define DEBUG
 using namespace std;
+namespace plt = matplotlibcpp;
+
+
 
 void sigGeneration(long double R0, long double v, long double theta, vector3DCLD_t&sigSpace) {
     parameters* p = new para1;
@@ -24,9 +29,9 @@ void sigGeneration(long double R0, long double v, long double theta, vector3DCLD
         R = R0 + v * na * (*p).PRI;
         for (int nr = 0;nr < (*p).Nr;nr++) {
             tr = (nr - (*p).Nr / 2.0) / (*p).Fs;
-            sigspace[nr][na] = (cos(2.0 * PI * (tr * (kr * 2.0 * R / c - 4.0 * v * kr * R / c / c + 2.0 * v * (*p).fc / c)
-                + tr * tr * (2.0 * v * kr / c - 2.0 * v * v * kr / c / c) + ((*p).fc * (*p).fc * R / c - kr * 2.0 * R *
-                    R / c / c - (*p).phi))));
+            sigspace[nr][na] = cos(2.0 * PI * (tr * (kr * 2.0 * R / c - 4.0 * v * kr * R / c / c + 2.0 * v * (*p).fc / c)
+                + tr * tr * (2.0 * v * kr / c - 2.0 * v * v * kr / c / c) + ((*p).fc * 2.0 * R / c - kr * 2.0 * R *
+                    R / c / c - (*p).phi)));
         }
     }
     for (int rx_i = 0; rx_i < p->N_tx; rx_i++) {
@@ -70,6 +75,25 @@ vector3DCLD_t fft3(vector<double>& blackmanNr, vector<double>& blackmanNa, vecto
         }
     }
 
+#ifdef DEBUG
+    vector2DLD_t absRdmDebug(Rdm_r[0].size(), vector1DLD_t(Rdm_r[0][0].size(), 0)), x1, y1;
+    for (int i = 0; i < Rdm_r[0].size(); i++) {
+        vector<long double>x_row, y_row;
+        for (int j = 0; j < Rdm_r[0][i].size(); j++) {
+            x_row.push_back(i);
+            y_row.push_back(j);
+            complex<long double> tmp = { Rdm_r[0][i][j],Rdm_i[0][i][j] };
+            absRdmDebug[i][j] += log10(abs(tmp));
+        }
+        x1.push_back(x_row);
+        y1.push_back(y_row);
+    }
+
+    plt::plot_surface(x1, y1, absRdmDebug);
+    plt::show();
+
+#endif
+
     // doppler fft
     for (int rx_i = 0; rx_i < p->N_tx; rx_i++) {
         for(int nr_i=0 ; nr_i < p->Nr; nr_i++){
@@ -90,6 +114,25 @@ vector3DCLD_t fft3(vector<double>& blackmanNr, vector<double>& blackmanNa, vecto
             fi.clear();
         }
     }
+
+#ifdef DEBUG
+    vector2DLD_t absRdmDebug2(Rdm[0].size(), vector1DLD_t(Rdm[0][0].size(), 0)), x2, y2;
+    for (int i = 0; i < Rdm[0].size(); i++) {
+        vector<long double>x_row, y_row;
+        for (int j = 0; j < Rdm[0][i].size(); j++) {
+            x_row.push_back(i);
+            y_row.push_back(j);
+            absRdmDebug2[i][j] += log10(abs(Rdm[0][i][j]));
+        }
+        x2.push_back(x_row);
+        y2.push_back(y_row);
+    }
+
+    plt::plot_surface(x2, y2, absRdmDebug2);
+    plt::show();
+
+#endif
+
     return Rdm;
 }
 

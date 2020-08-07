@@ -2,41 +2,48 @@
 #include <string>
 #include <vector>
 #include <complex>
-//#include <opencv2/core.hpp>
-//#include <opencv2/imgcodecs.hpp>
-//#include <opencv2/highgui.hpp>
+#include <Eigen/Eigenvalues>
 #include "randnum.h"
 #include "matplotlibcpp.h"
-#include "parameter.h"
-#include "matprocess.h"
+//#include "parameter.h"
+//#include "matprocess.h"
 #include "dataFile.h"
 #include "ObjectiveRating.h"
 
 using namespace std;
-//using namespace cv;
+using namespace Eigen;
 namespace plt = matplotlibcpp;
 
 
-//#define TESTOPENCV
+//#define EIGENTEST
 //#define MATPROCESS
 #define TESTMATPLOTLIB
 //#define SIGPROCESS
 
+//#define DEBUG
+
 int main(int argc, char** argv) {
 
-#ifdef TESTOPENCV
-	string Path = "C:\\Users\\lgd\\Pictures\\Camera Roll\\";
-	string filename = "bili_img_86334786.jpg";
-	Mat image;
-	image = imread(Path.append(filename), IMREAD_COLOR); // Read the file
-	if (image.empty()) // Check for invalid input
-	{
-		cout << "Could not open or find the image" << std::endl;
-		return -1;
+
+
+#ifdef EIGENTEST
+	
+	MatrixXd m(3,3);
+	double tmp;
+	for (int i = 0; i < m.rows(); i++) {
+		for (int j = 0; j < m.cols(); j++) {
+			m(i, j) = cin.get();
+		}
 	}
-	namedWindow("Display window", WINDOW_AUTOSIZE); // Create a window for display.
-	imshow("Display window", image); // Show our image inside it.
-	waitKey(0); // Wait for a keystroke in the window
+	
+	cout << m << endl;
+	EigenSolver<MatrixXd> es(m);
+	VectorXcd eigvalue = es.eigenvalues();
+	cout << eigvalue << endl;
+
+	cout << es.eigenvectors() << endl;
+
+
 #endif // TESTOPENCV
 
 #ifdef MATPROCESS
@@ -44,30 +51,49 @@ int main(int argc, char** argv) {
 	//dataWrite();
 
 	//读取文件
-	vector<vector<string>> IndexName;
-	vector<vector<double>> IndicesData;
-	vector<double> refeData;
-	vector<double> EMS;
+	vector<vector<vector<string>>> IndexName;
+	vector<vector<vector<double>>> IndicesData;
+	vector<vector<double>> refeData;
+	vector<vector<double>> EMS;
 
 
-	if (!dataRead(IndexName, IndicesData, refeData, EMS)) {
+	if (!dataReadFiles(IndexName, IndicesData, refeData, EMS)) {
 		cout << "Please check filename" << endl;
 		return 0;
 	}
+	//for (int ifiles = 0; ifiles < IndexName.size(); ifiles++) {
+	//	//数据标准化
+	//	if (!dataMatrixNormalized(IndicesData[ifiles], refeData[ifiles], EMS[ifiles], vector<int>(refeData[ifiles].size(), 1))) {
+	//		cout << "Matrix Normalized failed." << endl;
+	//		return 0;
+	//	}
 
-	//数据标准化
-	if (!dataMatrixNormalized(IndicesData, refeData, EMS, vector<int>(refeData.size(), 1))) {
-		cout << "Matrix Normalized failed." << endl;
-		return 0;
-	}
+	//	//客观评价方法
+	//	vector<vector<double>> wEWM, wGRA, wPCA;
+	//	wEWM.push_back(EntropyWeightMethod(IndicesData[ifiles]));
+	//	wGRA.push_back(GreyRelationalAnalysis(IndicesData[ifiles]));
+	//	wPCA.push_back(PrincipleComponentAnalysis(IndicesData[ifiles]));
 
-	//客观评价方法
-	vector<double> wEWM = EntropyWeightMethod(IndicesData);
+		
+#ifdef DEBUG
+		vector<double> wEWM_t = wEWM[ifiles];
+		for (vector<double>::size_type ii = 0; ii < wEWM_t.size(); ii++)
+			cout << wEWM_t[ii] << endl;
+#endif
+		//plot hist
+		plt::bar(IndicesData[0][0]);
+		plt::title("EntropyWeightMethod");
+		plt::show();
 
+		//plt::bar(wGRA.back());
+		//plt::title("GreyRelationalAnalysis");
+		//plt::show();
 
-	//plot hist
-	plt::bar(wEWM);
-	plt::show();
+		//plt::bar(wPCA.back());
+		//plt::title("PrincipleComponentAnalysis");
+		//plt::show();
+	//}
+	
 
 #endif
 
@@ -85,7 +111,7 @@ int main(int argc, char** argv) {
 	//	return 1;
 	//for (int k = 0; k < sigSpace.size(); k++) {
 	//	for (int i = 0; i < sigSpace[k].size(); i++) {
-	//		for (int j = 0;k<sigSpace[k][i].size();j++)
+	//		for (int j = 0;j<sigSpace[k][i].size();j++)
 	//			sigSpace[k][i][j] = radarcube[i][j][k];
 	//	}
 	//}
@@ -125,7 +151,7 @@ int main(int argc, char** argv) {
 			x_row.push_back(i);
 			y_row.push_back(j);
 			for (int k = 0; k < absRdm[i][j].size(); k++)
-				absRdmComb[i][j] += absRdm[i][j][k];
+				absRdmComb[i][j] += log10(absRdm[i][j][k]);
 		}
 		x.push_back(x_row);
 		y.push_back(y_row);
@@ -136,14 +162,44 @@ int main(int argc, char** argv) {
 
 #endif
 
+
+
 #ifdef TESTMATPLOTLIB	
-	std::vector<int> test_data;
-	for (int i = 0; i < 20; i++) {
-		test_data.push_back(i);
+	// Prepare data.
+	int n = 5000;
+	std::vector<double> x(n), y(n), z(n), w(n, 2);
+	for (int i = 0; i < n; ++i) {
+		x.at(i) = i * i;
+		y.at(i) = sin(2 * PI * i / 360.0);
+		z.at(i) = log(i);
 	}
 
-	plt::bar(test_data);
+	// Set the size of output image = 1200x780 pixels
+	plt::figure_size(1200, 780);
+
+	// Plot line from given x and y data. Color is selected automatically.
+	plt::plot(x, y);
+
+	// Plot a red dashed line from given x and y data.
+	plt::plot(x, w, "r--");
+
+	// Plot a line whose name will show up as "log(x)" in the legend.
+	plt::named_plot("log(x)", x, z);
+
+	// Set x-axis to interval [0,1000000]
+	plt::xlim(0, 1000 * 1000);
+
+	// Add graph title
+	plt::title("Sample figure");
+
+	// Enable legend.
+	plt::legend();
 	plt::show();
+	// save figure
+	const char* filename = "./basic.png";
+	std::cout << "Saving result to " << filename << std::endl;;
+	plt::save(filename);
+
 #endif
 	return 0; // free all vectors after run this code
 
