@@ -3,6 +3,7 @@
 #include <vector>
 #include <complex>
 #include <Eigen/Eigenvalues>
+#include <pthread.h>
 #include "randnum.h"
 #include "matplotlibcpp.h"
 //#include "parameter.h"
@@ -16,8 +17,8 @@ namespace plt = matplotlibcpp;
 
 
 //#define EIGENTEST
-//#define MATPROCESS
-#define TESTMATPLOTLIB
+#define MATPROCESS
+//#define TESTMATPLOTLIB
 //#define SIGPROCESS
 
 //#define DEBUG
@@ -47,32 +48,33 @@ int main(int argc, char** argv) {
 #endif // TESTOPENCV
 
 #ifdef MATPROCESS
-	// 写入文件
-	//dataWrite();
 
 	//读取文件
 	vector<vector<vector<string>>> IndexName;
 	vector<vector<vector<double>>> IndicesData;
 	vector<vector<double>> refeData;
 	vector<vector<double>> EMS;
+	vector<vector<double>> wEWM, wGRA, wPCA;
 
+	// 写入文件
+	//dataWrite();
 
 	if (!dataReadFiles(IndexName, IndicesData, refeData, EMS)) {
 		cout << "Please check filename" << endl;
 		return 0;
 	}
-	//for (int ifiles = 0; ifiles < IndexName.size(); ifiles++) {
-	//	//数据标准化
-	//	if (!dataMatrixNormalized(IndicesData[ifiles], refeData[ifiles], EMS[ifiles], vector<int>(refeData[ifiles].size(), 1))) {
-	//		cout << "Matrix Normalized failed." << endl;
-	//		return 0;
-	//	}
+	for (int ifiles = 0; ifiles < IndexName.size(); ifiles++) {
+		//数据标准化
+		if (!dataMatrixNormalized(IndicesData[ifiles], refeData[ifiles], EMS[ifiles], vector<int>(refeData[ifiles].size(), 1))) {
+			cout << "Matrix Normalized failed." << endl;
+			return 0;
+		}
 
-	//	//客观评价方法
-	//	vector<vector<double>> wEWM, wGRA, wPCA;
-	//	wEWM.push_back(EntropyWeightMethod(IndicesData[ifiles]));
-	//	wGRA.push_back(GreyRelationalAnalysis(IndicesData[ifiles]));
-	//	wPCA.push_back(PrincipleComponentAnalysis(IndicesData[ifiles]));
+		//客观评价方法
+		
+		wEWM.push_back(EntropyWeightMethod(IndicesData[ifiles]));
+		wGRA.push_back(GreyRelationalAnalysis(IndicesData[ifiles]));
+		wPCA.push_back(PrincipleComponentAnalysis(IndicesData[ifiles]));
 
 		
 #ifdef DEBUG
@@ -81,18 +83,18 @@ int main(int argc, char** argv) {
 			cout << wEWM_t[ii] << endl;
 #endif
 		//plot hist
-		plt::bar(IndicesData[0][0]);
+		plt::bar(wEWM[ifiles]);
 		plt::title("EntropyWeightMethod");
 		plt::show();
 
-		//plt::bar(wGRA.back());
-		//plt::title("GreyRelationalAnalysis");
-		//plt::show();
+		plt::bar(wGRA[ifiles]);
+		plt::title("GreyRelationalAnalysis");
+		plt::show();
 
-		//plt::bar(wPCA.back());
-		//plt::title("PrincipleComponentAnalysis");
-		//plt::show();
-	//}
+		plt::bar(wPCA[ifiles]);
+		plt::title("PrincipleComponentAnalysis");
+		plt::show();
+	}
 	
 
 #endif

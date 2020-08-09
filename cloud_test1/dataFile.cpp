@@ -18,6 +18,14 @@ bool dataWrite() {
 	ofstream findicesData;
 	int N, nidx, options;
 	double steps;
+	string tag;
+	int indexNum = 0;
+	string indexName,fid,fid2;
+	double EMS = NULL;
+	double refeData = NULL;
+	int dataLength = NULL;
+	vector<double> indicesData;
+
 	cout << "Please enter the numbers of files to generate:";
 	cin >> N;
 	cout << "Please enter the fileName(indicesData): ";
@@ -28,7 +36,7 @@ bool dataWrite() {
 	cin >> steps;
 
 	// 判断是否选择上一次配置文件
-	string tag;
+	
 	cout << "If you use the latest saved config (yes/no): ";
 	cin >> tag;
 	while (tag.compare("yes") && tag.compare("no")) {
@@ -41,7 +49,7 @@ bool dataWrite() {
 	nidx = 0;
 	while (nidx++<N){
 		//参数文件
-		string fid = "";
+		fid = "";
 		fid.append(Path);
 		fid.append(filename);
 		fid.append("_");
@@ -50,15 +58,13 @@ bool dataWrite() {
 		findicesData.open(fid, ios::out | ios::trunc); // create if not exist and clear all if exist
 
 
-		int indexNum = 0;
-		string indexName;
-		double EMS = NULL;
-		double refeData = NULL;
-		int dataLength = NULL;
-		vector<double> indicesData;
+		indexNum = 0;
+		EMS = NULL;
+		refeData = NULL;
+		dataLength = NULL;
 
 		//配置文件（保存本次参数）
-		string fid2 = "";
+		fid2 = "";
 		fid2.append(Path);
 		fid2.append(filename);
 		fid2.append(configFiletype);
@@ -135,7 +141,7 @@ bool dataWrite() {
 
 bool dataReadFiles(vector<vector<vector<string>>>& indexName_t, vector<vector<vector<double>>>& indicesData_t, 
 	vector<vector<double>>& refeData_t, vector<vector<double>>& EMS_t) {
-	string Path = "C:\\Users\\puddingleos\\source\\repos\\MatlabCpp2";
+	string Path = "C:\\Users\\puddingleos\\source\\repos\\MatlabCpp3";
 	string searchFile = Path;
 	string filename;
 	string filetype = ".txt";
@@ -147,12 +153,25 @@ bool dataReadFiles(vector<vector<vector<string>>>& indexName_t, vector<vector<ve
 	vector<vector<double>> indicesData;
 	vector<double> refeData;
 	vector<double> EMS;
+	vector<int> dataLength;
+	string tmp;
+	string number;
 
+	int ifiles = 0;
+	int Nfiles = countFiles(searchFile, filetype);//文件数量
+
+	//indexName_t.resize(Nfiles,vector<vector<string>>(0,vector<string>(0)));
+	//indicesData_t.resize(Nfiles, vector<vector<double>>(0, vector<double>(0)));
+	//refeData_t.resize(Nfiles, vector<double>(0));
+	//EMS_t.resize(Nfiles, vector<double>(0));
 
 	intptr_t hFile;//这个变量是intptr_t类型的，网上很多都是long类型。如果为long类型，那么在x64平台上就会出错！
 	_finddatai64_t fileInfo;
 	searchFile.append("\\*" + filetype);
 	//searchFile.append("indicesData_1.txt");
+
+
+
 
 	if ((hFile = _findfirst64(searchFile.c_str(), &fileInfo)) == -1)
 		return false;
@@ -176,15 +195,15 @@ bool dataReadFiles(vector<vector<vector<string>>>& indexName_t, vector<vector<ve
 		findicesData.clear();//clear tag before rewind
 		findicesData.seekg(0, ios::beg);
 
-		//vector<string> indexName(indexNum);
-		//vector<vector<double>> indicesData(indexNum);
-		//vector<double> refeData, EMS;
-
+		//初始化
+		indexName.clear();
+		indicesData.clear();
+		refeData.clear();
+		EMS.clear();
+		dataLength.clear();
 		indexName.resize(indexNum - 1);
 		indicesData.resize(indexNum - 1);
-		vector<int> dataLength;
-		string tmp;
-		string number;
+
 
 		int k = 0;
 		while (getline(findicesData, tmp)) {
@@ -236,12 +255,31 @@ bool dataReadFiles(vector<vector<vector<string>>>& indexName_t, vector<vector<ve
 			k++;
 		}
 		findicesData.close();
+
 		indexName_t.push_back(indexName);
 		refeData_t.push_back(refeData);
 		EMS_t.push_back(EMS);
 		indicesData_t.push_back(indicesData);
-
+		ifiles++;
 
 	} while (_findnext64(hFile, &fileInfo) != -1);
 	return true;
+}
+
+
+
+int countFiles(string path,string filetype) {
+	int count = 0;
+	intptr_t hFile;//这个变量是intptr_t类型的，网上很多都是long类型。如果为long类型，那么在x64平台上就会出错！
+	_finddatai64_t fileInfo;
+	if (filetype[0] != '.')
+		path.append("\\*." + filetype);
+	else
+		path.append("\\*" + filetype);
+	if ((hFile = _findfirst64(path.c_str(), &fileInfo)) == -1)
+		return 0;
+	do {
+		count++;
+	} while (_findnext64(hFile, &fileInfo) != -1);
+	return count;
 }
