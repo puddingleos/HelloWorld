@@ -3,7 +3,7 @@
 #include <vector>
 #include <complex>
 #include <Eigen/Eigenvalues>
-#include <pthread.h>
+//#include <pthread.h>
 #include "randnum.h"
 #include "matplotlibcpp.h"
 //#include "parameter.h"
@@ -24,8 +24,6 @@ namespace plt = matplotlibcpp;
 //#define DEBUG
 
 int main(int argc, char** argv) {
-
-
 
 #ifdef EIGENTEST
 	
@@ -52,14 +50,16 @@ int main(int argc, char** argv) {
 	//读取文件
 	vector<vector<vector<string>>> IndexName;
 	vector<vector<vector<double>>> IndicesData;
-	vector<vector<double>> refeData;
-	vector<vector<double>> EMS;
+	vector<vector<double>> refeData, EMS;
+	vector<vector<int>> dataLength;
+	vector<vector<double>> rEWM, rGRA, rPCA;
 	vector<vector<double>> wEWM, wGRA, wPCA;
+	vector<double> x_t;
 
 	// 写入文件
 	//dataWrite();
 
-	if (!dataReadFiles(IndexName, IndicesData, refeData, EMS)) {
+	if (!dataReadFiles(IndexName, IndicesData, refeData, EMS, dataLength)) {
 		cout << "Please check filename" << endl;
 		return 0;
 	}
@@ -76,26 +76,51 @@ int main(int argc, char** argv) {
 		wGRA.push_back(GreyRelationalAnalysis(IndicesData[ifiles]));
 		wPCA.push_back(PrincipleComponentAnalysis(IndicesData[ifiles]));
 
-		
+		rEWM.push_back(EvlWithTOPSIS(wEWM[ifiles], IndicesData[ifiles]));
+		rGRA.push_back(EvlWithTOPSIS(wGRA[ifiles], IndicesData[ifiles]));
+		rPCA.push_back(EvlWithTOPSIS(wPCA[ifiles], IndicesData[ifiles]));
+
 #ifdef DEBUG
 		vector<double> wEWM_t = wEWM[ifiles];
 		for (vector<double>::size_type ii = 0; ii < wEWM_t.size(); ii++)
 			cout << wEWM_t[ii] << endl;
 #endif
-		//plot hist
-		plt::bar(wEWM[ifiles]);
-		plt::title("EntropyWeightMethod");
+		//for (int kx = 0; kx < wEWM[ifiles].size(); kx++)
+		//	x_t.push_back(kx + 1.0);
+		////plot hist
+		//plt::bar(wEWM[ifiles]);
+		//plt::title("EntropyWeightMethod");
+		//plt::show();
+
+		//plt::bar(wGRA[ifiles]);
+		//plt::title("GreyRelationalAnalysis");
+		//plt::show();
+
+		//plt::bar(wPCA[ifiles]);
+		//plt::title("PrincipleComponentAnalysis");
+		//plt::show();
+
+		
+		plt::named_plot("EntropyWeightMethod", rEWM[ifiles],"*--");
+		plt::named_plot("GreyRelationalAnalysis", rGRA[ifiles],"*--");
+		plt::named_plot("PrincipleComponentAnalysis", rPCA[ifiles],"*--");
+		plt::title("files " + to_string(ifiles)+", "+to_string(rEWM[ifiles].size())+" datas");
+		plt::legend();
+		plt::grid(1);
 		plt::show();
 
-		plt::bar(wGRA[ifiles]);
-		plt::title("GreyRelationalAnalysis");
-		plt::show();
-
-		plt::bar(wPCA[ifiles]);
-		plt::title("PrincipleComponentAnalysis");
-		plt::show();
+		//x_t.clear();
 	}
+
+	//PlotWithDataLength(wEWM, dataLength, IndexName,"Entropy Weight Method");
+	//PlotWithDataLength(wGRA, dataLength, IndexName, "Grey Relational Analysis");
+	//PlotWithDataLength(wPCA, dataLength, IndexName, "Principle Component Analysis");
 	
+	//PlotWithEMS(wEWM, EMS, dataLength, IndexName, "Entropy Weight Method");
+	//PlotWithEMS(wGRA, EMS, dataLength, IndexName, "Grey Relational Analysis");
+	//PlotWithEMS(wPCA, EMS, dataLength, IndexName, "Principle Component Analysis");
+
+
 
 #endif
 

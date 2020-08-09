@@ -140,8 +140,9 @@ bool dataWrite() {
 
 
 bool dataReadFiles(vector<vector<vector<string>>>& indexName_t, vector<vector<vector<double>>>& indicesData_t, 
-	vector<vector<double>>& refeData_t, vector<vector<double>>& EMS_t) {
-	string Path = "C:\\Users\\puddingleos\\source\\repos\\MatlabCpp3";
+	vector<vector<double>>& refeData_t, vector<vector<double>>& EMS_t, vector<vector<int>>& dataLength_t) {
+	//string Path = "C:\\Users\\puddingleos\\source\\repos\\MatlabCpp3";
+	string Path = "C:\\Users\\lgd\\source\\repos\\MatlabCpp";
 	string searchFile = Path;
 	string filename;
 	string filetype = ".txt";
@@ -260,6 +261,7 @@ bool dataReadFiles(vector<vector<vector<string>>>& indexName_t, vector<vector<ve
 		refeData_t.push_back(refeData);
 		EMS_t.push_back(EMS);
 		indicesData_t.push_back(indicesData);
+		dataLength_t.push_back(dataLength);
 		ifiles++;
 
 	} while (_findnext64(hFile, &fileInfo) != -1);

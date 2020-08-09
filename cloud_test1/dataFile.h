@@ -9,7 +9,7 @@
 
 bool dataWrite();
 bool dataReadFiles(vector<vector<vector<string>>>& indexName_t, vector<vector<vector<double>>>& indicesData_t,
-	vector<vector<double>>& refeData_t, vector<vector<double>>& EMS_t);
+	vector<vector<double>>& refeData_t, vector<vector<double>>& EMS_t, vector<vector<int>>& dataLength_t);
 int countFiles(string path, string filetype);
 
 #endif // ! _DATAFILE_H_
