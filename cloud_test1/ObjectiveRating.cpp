@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 #include <vector>
 #include <map>
 #include <string>
@@ -9,6 +10,7 @@
 
 #include "matplotlibcpp.h"
 #include "ObjectiveRating.h"
+#include <regex>
 
 //#define DEBUG
 
@@ -333,4 +335,156 @@ void PlotWithEMS(vector<vector<double>> wEWM, vector<vector<double>> EMS, vector
 	plt::show();
 
 	return;
+}
+
+
+
+vector<vector<vector<double>>> dataConvert(vector<vector<double>> indicesData,string subRateM) {
+	// 等级    1   2   3   4   5   6   7   8   9
+	// 对应值  1/9 1/7 1/5 1/3 1   3   5   7   9
+	vector<vector<double>> dataConvert_t;
+	vector<vector<vector<double>>> dataConvert_r;
+	vector<double> convertTabl = { 1 / 9.0,1 / 7.0,1 / 5.0,1 / 3.0,1.0,3.0,5.0,7.0,9.0 };
+	vector<vector<double>> convertTabl2 = { {0,0,0.25}, {0,0.25,0.5}, {0.25,0.5,0.75}, {0.5,0.75,1}, {0.75,1,1} };
+	double tmp;
+	for (int i = 0; i < indicesData.size(); i++) {
+		dataConvert_t.resize(indicesData[i].size());
+		for (int j = 0; j < indicesData[i].size(); j++) {
+			if (indicesData[i][j] > 0)
+				if (0 == subRateM.compare("AHP"))
+					dataConvert_t[j].push_back(convertTabl[(int)indicesData[i][j] - 1]);
+				else if (0 == subRateM.compare("FDM")) {
+					dataConvert_t[j][0] = convertTabl2[(int)indicesData[i][j] -1][0];
+					dataConvert_t[j][1] = convertTabl2[(int)indicesData[i][j] -1][1];
+					dataConvert_t[j][2] = convertTabl2[(int)indicesData[i][j] -1][2];
+				}
+				else
+					dataConvert_t[j].push_back(indicesData[i][j]);
+		}
+		if (!dataConvert_t.empty())
+			dataConvert_r.push_back(dataConvert_t);
+		dataConvert_t.clear();
+	}
+	return dataConvert_r;
+}
+
+
+vector<double> AHP(vector<vector<vector<double>>> indicesData,vector<vector<string>> indexName) {
+	vector<double> indicesVector;
+	vector<double> weight(3,0);
+	vector<vector<string>> indexName_t;
+	vector<string> tt;
+	stringstream ss;
+	string str_t;
+	int Lv1 = 3, Lv2 = 8, Lv3 = 19;
+	//默认AHP输入矩阵第三维为1
+	for (int i = 0; i < indicesData.size(); ++i) {
+		for (int j = 0; j < indicesData[i].size() && j< Lv1; ++j) {
+			for (int k = 0; k < indicesData[i][j].size(); ++k) {
+				indicesVector.push_back(indicesData[i][j][k]);
+			}
+		}
+		//一级指标权重
+		indexName_t.resize(Lv1);
+		for (int it = 0; it < Lv1; ++it) {
+			tt.assign(indexName[it].begin(), indexName[it].end());
+			indexName_t[it].push_back(tt[0]);
+			tt.clear();
+		}
+		weight = consistencyCheck(indicesVector, indexName_t);
+		indicesVector.clear();
+		indexName_t.clear();
+	}
+
+	return weight;
+
+}
+
+vector<double> consistencyCheck(vector<double> indicesMatrix,vector<vector<string>> indexName) {
+	VectorXcd weight(indicesMatrix.size());
+	MatrixXd judgeMatrix = MatrixXd::Identity(indicesMatrix.size(), indicesMatrix.size());
+	vector<vector<string>> indexName_t(indexName.size());
+	vector<string> tmp;
+	string tt,tt2;
+	int tag = 0, count = 0;
+	regex reg("“(.{4,24})”");
+	smatch name_t;
+
+	vector<int> xy(2,0);//矩阵坐标
+	VectorXd RI(15);
+	double CI = 0, CR = 0;
+
+	vector<double> weight_r;
+
+	//保存指标
+	for (int i = 0; i < indexName.size(); i++) {
+		tmp.assign(indexName[i].begin(), indexName[i].end());
+		tt = tmp[0].c_str();//vector->string
+		auto pos = tt.cbegin();
+		for (; regex_search(pos, tt.cend(), name_t, reg); pos = name_t.suffix().first) {
+			//cout << name_t.str() << endl;
+			for (int it = 0; it < indexName_t.size(); ++it) {
+				tmp.assign(indexName_t[it].begin(), indexName_t[it].end());
+				tt2 = tmp[0].c_str();
+				if (0 == tt2.compare(name_t.str())) {
+					tag = 1;
+					break;
+				}
+			}
+			if (0 == tag) {
+				indexName_t[count++].push_back(name_t.str());//string->vector
+			}
+			tag = 0;
+		}
+	}
+	//生成矩阵
+	for (int i = 0; i < indexName.size(); i++) {
+		count = 0;
+		tmp.assign(indexName[i].begin(), indexName[i].end());
+		tt = tmp[0].c_str();
+		auto pos = tt.cbegin();
+		for (; regex_search(pos, tt.cend(), name_t, reg); pos = name_t.suffix().first) {
+			for (int it = 0; it < indexName_t.size(); ++it) {
+				tmp.assign(indexName_t[it].begin(), indexName_t[it].end());
+				tt2 = tmp[0].c_str();
+				if (0==tt2.compare(name_t.str()))
+					xy[count++] = it;
+			}
+		}
+		judgeMatrix(xy[0], xy[1]) = indicesMatrix[i];
+		judgeMatrix(xy[1], xy[0]) = 1.0/indicesMatrix[i];
+	}
+	cout << judgeMatrix << endl;
+
+	//特征分解
+	EigenSolver<MatrixXd> es;
+	es.compute(judgeMatrix, true);
+
+	MatrixXd::Index maxrow;
+	cout << es.eigenvalues().rowwise().norm() << endl;
+	complex<double> maxRoot = es.eigenvalues().rowwise().norm().maxCoeff(&maxrow);
+	cout << abs(maxRoot) << endl;
+	MatrixXcd MRvectors(es.eigenvalues().rows(), 1);
+	for (int mri = 0; mri < es.eigenvectors().rows(); ++mri)
+		MRvectors(mri, 0) = es.eigenvectors()(mri, maxrow);//获取最大特征值的特征向量
+	RI << 0, 0, 0.52, 0.89, 1.12, 1.26, 1.36, 1.41, 1.46, 1.49, 1.52, 1.54, 1.56, 1.58, 1.59;
+
+	if (maxRoot.real() > judgeMatrix.rows() && judgeMatrix.rows() > 2) {
+		cout << judgeMatrix.rows() << endl;
+		CI = (maxRoot.real() - judgeMatrix.rows()) / (judgeMatrix.rows() - 1);
+		CR = CI / RI(judgeMatrix.rows() - 1);
+		if (CR < 0.1)
+			weight = MRvectors.array() / (MRvectors.sum() * VectorXd::Ones(judgeMatrix.rows(), 1)).array();
+		else
+			weight = VectorXd::Zero(judgeMatrix.rows(), 1);
+	}
+	else {
+		weight = MRvectors.array() / (MRvectors.sum() * VectorXd::Ones(judgeMatrix.rows(), 1)).array();
+	}
+
+	// VectorXd -> vector<double>
+	for (int jt = 0; jt < weight.size(); ++jt)
+		weight_r.push_back(abs(weight(jt)));
+
+	return weight_r;
 }

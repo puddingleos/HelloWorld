@@ -10,38 +10,80 @@
 //#include "matprocess.h"
 #include "dataFile.h"
 #include "ObjectiveRating.h"
+#include <regex>
 
 using namespace std;
 using namespace Eigen;
 namespace plt = matplotlibcpp;
 
 
-//#define EIGENTEST
-#define MATPROCESS
+#define EIGENTEST
+//#define MATPROCESS
 //#define TESTMATPLOTLIB
 //#define SIGPROCESS
 
-//#define DEBUG
+#define DEBUG
 
 int main(int argc, char** argv) {
 
 #ifdef EIGENTEST
-	
-	MatrixXd m(3,3);
-	double tmp;
-	for (int i = 0; i < m.rows(); i++) {
-		for (int j = 0; j < m.cols(); j++) {
-			m(i, j) = cin.get();
-		}
-	}
-	
-	cout << m << endl;
-	EigenSolver<MatrixXd> es(m);
-	VectorXcd eigvalue = es.eigenvalues();
-	cout << eigvalue << endl;
 
-	cout << es.eigenvectors() << endl;
 
+	//MatrixXd judgeMatrix(3, 3);
+	//judgeMatrix << 1, 9, 7,
+	//	1.0 / 9, 1, 5,
+	//	1.0 / 7, 1.0 / 5, 1;
+	////cout << judgeMatrix << endl;
+	////特征分解
+	//EigenSolver<MatrixXd> es;
+	//es.compute(judgeMatrix, true);
+
+	//MatrixXcd::Index maxrow,maxcol;
+	//complex<double> maxRoot = es.eigenvalues().rowwise().squaredNorm().maxCoeff(&maxrow);
+	//MatrixXcd eigvec = es.eigenvectors();
+	////std::cout << eigvec.real() << endl;
+	//MatrixXcd MRvectors(eigvec.rows(),1);
+	//for (int mri = 0; mri < eigvec.rows();++mri)
+	//	MRvectors(mri,0) = eigvec(mri,maxrow);//获取最大特征值的特征向量
+
+
+	//VectorXd RI(15);
+	//double CI, CR;
+	//ArrayXcd weight;
+	//vector<double> weight_r;
+	//RI << 0, 0, 0.52, 0.89, 1.12, 1.26, 1.36, 1.41, 1.46, 1.49, 1.52, 1.54, 1.56, 1.58, 1.59;
+
+	//if (abs(maxRoot) > judgeMatrix.rows() && judgeMatrix.rows() > 2) {
+	//	CI = (abs(maxRoot) - judgeMatrix.rows()) / (judgeMatrix.rows() - 1);
+	//	CR = CI / RI(judgeMatrix.rows() - 1);
+	//	//cout << abs(MRvectors.sum()) << endl;
+	//	//cout << MRvectors.sum() * MatrixXd::Ones(judgeMatrix.rows(), 1) << endl;
+	//	//cout << MRvectors << endl;
+	//	if (CR < 0.1) {
+	//		
+	//		weight = MRvectors.array() / (MRvectors.sum() * MatrixXd::Ones(judgeMatrix.rows(), 1)).array();
+	//	}
+	//		
+	//	else
+	//		weight = VectorXd::Zero(judgeMatrix.rows(), 1);
+	//}
+	//else {
+	//	weight = MRvectors.array() / (MRvectors.sum() * MatrixXd::Ones(judgeMatrix.rows(), 1)).array();
+	//	
+	//}
+
+	//// VectorXd -> vector<double>
+	//for (int jt = 0; jt < weight.size(); ++jt)
+	//	weight_r.push_back(abs(weight(jt)));
+
+
+
+	vector<vector<vector<string>>> indexName_t; 
+	vector<vector<vector<double>>> indicesData_t,indicesData;
+	csvRead(indexName_t, indicesData_t);
+
+	indicesData = dataConvert(indicesData_t[0], "AHP");
+	vector<double> weight = AHP(indicesData, indexName_t[0]);
 
 #endif // TESTOPENCV
 
@@ -224,7 +266,7 @@ int main(int argc, char** argv) {
 	plt::show();
 	// save figure
 	const char* filename = "./basic.png";
-	std::cout << "Saving result to " << filename << std::endl;;
+	std::cout << "Saving result to " << filename << std::endl;
 	plt::save(filename);
 
 #endif

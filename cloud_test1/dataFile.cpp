@@ -7,8 +7,120 @@
 #include "randnum.h"
 #include "dataFile.h"
 #include <io.h>
+#include <regex>
 
 using namespace std;
+#define DEBUG
+
+bool csvRead(vector<vector<vector<string>>>& indexName_t, vector<vector<vector<double>>>& indicesData_t) {
+	string Path = "D:\\programme file\\MATLAB\\GitRepository\\data_report";
+	string SearchPath = Path;
+	string filename;
+	string filetype = ".csv";
+	ifstream findicesData;
+	string tmp;
+
+	vector<vector<string>> indexName;
+	vector<vector<double>> indicesData;
+	vector<double> refeData;
+	vector<double> EMS;
+	vector<int> dataLength;
+	string str_t, num_t;
+	int tag = 1;
+
+	regex reg1("“(.{4,30})”——“(.{4,30})”");//正则表达式匹配AHP
+	regex reg2("（(.{1,2})）_(.{4,30})_开放选项");//正则表达式匹配FDM
+	int count = 0;
+	const sregex_token_iterator end_t;
+	smatch indexname_t;
+
+	intptr_t hFile;//这个变量是intptr_t类型的，网上很多都是long类型。如果为long类型，那么在x64平台上就会出错！
+	_finddatai64_t fileInfo;
+	SearchPath.append("\\AHP" + filetype);
+	//searchFile.append("indicesData_1.txt");
+
+	if ((hFile = _findfirst64(SearchPath.c_str(), &fileInfo)) == -1) {
+		cout<<"No "<<filetype << " files is found."<<endl;
+		return false;
+	}
+	do {
+		filename.append(fileInfo.name);//获取文件名
+		findicesData.open(Path + "\\" + filename, ios::in);
+		filename.clear();
+		if (!findicesData.is_open()) {
+			cout << "file [" << filename << "] is not exist." << endl;
+			return false;
+		}
+
+
+		indexName.resize(VECTORSIZE);
+		indicesData.resize(VECTORSIZE);
+		findicesData.clear();//clear tag before rewind
+		findicesData.seekg(0, ios::beg);
+
+		int k = 0;
+		while (getline(findicesData, tmp)) {
+			if (k == 0) {
+				if (regex_search(tmp,reg1))//迭代器赋值
+					for (sregex_token_iterator matchStr(tmp.begin(), tmp.end(), reg1); matchStr != end_t; ++matchStr) {
+						indexName[count++].push_back(*matchStr);
+					}
+				else if (regex_search(tmp,reg2)){
+					auto pos = tmp.cbegin();//regex_search一个一个搜索
+					for (; regex_search(pos, tmp.cend(), indexname_t, reg2); pos = indexname_t.suffix().first) {
+						cout << indexname_t.str(2) << endl;
+						indexName[count++].push_back(indexname_t.str(2));
+					}
+				}
+					
+			}
+			else {
+				str_t = tmp.substr(tmp.find("正常完成"),tmp.size());
+				//cout << str_t << endl;
+				for (int i = 0; i < str_t.size(); i++) {
+					if (str_t[i] >= '0' && str_t[i] <= '9') {
+						num_t.push_back(str_t[i]);
+						tag = 0;
+					}
+					else 
+						tag = 1;
+					if (!num_t.empty() && tag) {
+						indicesData[count++].push_back(stoi(num_t));
+						num_t.clear();
+						tag = 1;
+					}
+				}
+			}
+			count = 0;
+			tag = 1;
+			tmp.clear();
+			str_t.clear();
+			k++;
+		}
+		findicesData.close();
+		int kt = VECTORSIZE;
+		for (vector<vector<string>>::iterator it = indexName.end(); it != indexName.begin(); --it) {
+			if (indexName[kt--].size() == 0)
+				indexName.erase(it);
+			else
+				break;
+		}
+		kt = VECTORSIZE;
+		for (vector<vector<double>>::iterator it = indicesData.end(); it != indicesData.begin(); --it) {
+			if (indicesData[kt--].size() == 0)
+				indicesData.erase(it);
+			else
+				break;
+		}
+		indexName_t.push_back(indexName);
+		indicesData_t.push_back(indicesData);
+
+		indexName.clear();
+		indicesData.clear();
+
+	} while (_findnext64(hFile, &fileInfo) != -1);
+	return true;
+}
 
 bool dataWrite() {
 	string Path = "";
