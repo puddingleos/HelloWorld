@@ -20,7 +20,21 @@ void PlotWithEMS(vector<vector<double>> wEWM, vector<vector<double>> EMS, vector
 	vector<vector<vector<string>>> IndexName, const string title = {});
 
 vector<vector<vector<double>>> dataConvert(vector<vector<double>> indicesData, string subRateM);
-vector<double> AHP(vector<vector<vector<double>>> indicesData, vector<vector<string>> indexName);
-vector<double> consistencyCheck(vector<double> indicesMatrix, vector<vector<string>> indexName);
+vector<double> AHP(vector<vector<vector<double>>> indicesData, vector<vector<string>>& indexName);
+vector<double> consistencyCheck(vector<double> indicesMatrix, vector<vector<string>>& indexName);
+vector<double> FDM(vector<vector<vector<double>>> indicesData, vector<vector<string>>& indexName);
+
+bool PyCvxpyInputData(
+	//主观评价权重和数据
+	string submethods,
+	vector<double> subweight,
+	vector<vector<double>> subindicesData,
+	//客观评价权重和数据
+	string objmethods,
+	vector<double> objweight,
+	vector<vector<double>> objindicesData,
+	//返回结果
+	vector<vector<double>>& A,
+	vector<double>& b);
 
 #endif

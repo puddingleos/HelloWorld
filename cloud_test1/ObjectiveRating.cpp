@@ -354,9 +354,9 @@ vector<vector<vector<double>>> dataConvert(vector<vector<double>> indicesData,st
 				if (0 == subRateM.compare("AHP"))
 					dataConvert_t[j].push_back(convertTabl[(int)indicesData[i][j] - 1]);
 				else if (0 == subRateM.compare("FDM")) {
-					dataConvert_t[j][0] = convertTabl2[(int)indicesData[i][j] -1][0];
-					dataConvert_t[j][1] = convertTabl2[(int)indicesData[i][j] -1][1];
-					dataConvert_t[j][2] = convertTabl2[(int)indicesData[i][j] -1][2];
+					dataConvert_t[j].push_back(convertTabl2[(int)indicesData[i][j] -1][0]);
+					dataConvert_t[j].push_back(convertTabl2[(int)indicesData[i][j] -1][1]);
+					dataConvert_t[j].push_back(convertTabl2[(int)indicesData[i][j] -1][2]);
 				}
 				else
 					dataConvert_t[j].push_back(indicesData[i][j]);
@@ -369,44 +369,105 @@ vector<vector<vector<double>>> dataConvert(vector<vector<double>> indicesData,st
 }
 
 
-vector<double> AHP(vector<vector<vector<double>>> indicesData,vector<vector<string>> indexName) {
+vector<double> AHP(vector<vector<vector<double>>> indicesData,vector<vector<string>>& indexName) {
 	vector<double> indicesVector;
-	vector<double> weight(3,0);
-	vector<vector<string>> indexName_t;
-	vector<string> tt;
-	stringstream ss;
+	vector<double> weight,wt;
+	vector<vector<double>> wtt;
+	vector<vector<string>> indexName_t,indexname_o(indexName.size());
+	vector<string> tt,ts;
 	string str_t;
-	int Lv1 = 3, Lv2 = 8, Lv3 = 19;
+	vector<int> Lvn = { 0,3,9,12,15,16,19,22,23,26,27,(int)indicesData.size() };
+	vector<int> MappingTable = { 1,2,3,10,10,10,10,20,20,20,11,11,11,12,12,13,13,13,14,14,14,21,21,22,22,22,231,31,31 };//各级指标映射表
+	vector<double> indicesLv1;
+	vector<vector<double>> indicesLv2(indicesData.size());
+	int count_indexname(0);
+
 	//默认AHP输入矩阵第三维为1
-	for (int i = 0; i < indicesData.size(); ++i) {
-		for (int j = 0; j < indicesData[i].size() && j< Lv1; ++j) {
-			for (int k = 0; k < indicesData[i][j].size(); ++k) {
-				indicesVector.push_back(indicesData[i][j][k]);
+	//第一维 28个参数，第二维指标数据数量
+	for (int j = 0; j < indicesData[0].size(); ++j) {
+		for (int count = 0; count < Lvn.size() - 1; ++count) {
+			for (int i = Lvn[count]; i < indicesData.size() && i < Lvn[count+1]; ++i) {
+				for (int k = 0; k < indicesData[i][0].size(); ++k) {
+					indicesVector.push_back(indicesData[i][j][k]);
+				}
 			}
+			//一级指标权重
+			indexName_t.resize(Lvn[count+1]-Lvn[count]);
+			for (int it = Lvn[count]; it < Lvn[count + 1]; ++it) {
+				tt.assign(indexName[it].begin(), indexName[it].end());
+				indexName_t[it- Lvn[count]].push_back(tt[0]);
+				tt.clear();
+			}
+			wt = consistencyCheck(indicesVector, indexName_t);
+			for (int it = 0; it < wt.size(); ++it) {
+				weight.push_back(wt[it]);//同一维vector只能单个单个push_back
+				if (0 == j) {
+					ts.assign(indexName_t[it].begin(), indexName_t[it].end());
+					indexname_o[count_indexname++].push_back(ts[0]);
+					ts.clear();
+				}
+					
+			}
+				
+			
+			indicesVector.clear();
+			indexName_t.clear();
+			wt.clear();
 		}
-		//一级指标权重
-		indexName_t.resize(Lv1);
-		for (int it = 0; it < Lv1; ++it) {
-			tt.assign(indexName[it].begin(), indexName[it].end());
-			indexName_t[it].push_back(tt[0]);
-			tt.clear();
-		}
-		weight = consistencyCheck(indicesVector, indexName_t);
-		indicesVector.clear();
-		indexName_t.clear();
+		wtt.push_back(weight);
+		weight.clear();
 	}
+	wt = vector<double>(wtt[0].size(), 0);
+	int count = 0;
+	for (int j = 0; j < wtt[0].size(); ++j) {
+		for (int i = 0; i < wtt.size(); ++i) {
+			wt[j] += wtt[i][j];
+			if (wtt[i][j] > 0)
+				count++;
+		}
+		if (count > 0) {
+			wt[j] /= (double)count;
+			count = 0;
+		}
+	}
+
+	//各级指标加权
+	weight.resize(wt.size(),-1);
+	//weight.resize(19);
+	count = 0;
+	for (int it = 0; it < MappingTable.size(); ++it) {
+		if (MappingTable[it] > 0 && MappingTable[it] < 10)
+			indicesLv1.push_back(wt[it]);
+		else if (MappingTable[it] > 0 && MappingTable[it] % 10 == 0)
+			indicesLv2[MappingTable[it] / 10 - 1].push_back(wt[it]);
+		else if (MappingTable[it] > 0 && MappingTable[it] / 10 < 10){
+			if (indicesLv2[MappingTable[it] / 10 - 1].empty())//二级指标不存在时，默认设为1
+				weight[count++] = (wt[it] * indicesLv1[MappingTable[it] / 10 - 1] * 1);
+			else
+				weight[count++] = (wt[it] * indicesLv1[MappingTable[it] / 10 - 1] * indicesLv2[MappingTable[it] / 10 - 1][MappingTable[it] % 10 - 1]);
+		}
+		else {//一二级指标在，三级指标不在，用三位数标记
+			weight[count++] = 1 * indicesLv1[MappingTable[it] / 100 - 1] * indicesLv2[MappingTable[it] / 100 - 1][MappingTable[it] / 10 % 10 - 1];
+		}
+	}
+	indexName.clear();
+	indexName = indexname_o;
+	while (indexName.back().empty())
+		indexName.pop_back();
+
+	while (weight.back() <= 0)
+		weight.pop_back();
+	
 
 	return weight;
 
 }
 
-vector<double> consistencyCheck(vector<double> indicesMatrix,vector<vector<string>> indexName) {
-	VectorXcd weight(indicesMatrix.size());
-	MatrixXd judgeMatrix = MatrixXd::Identity(indicesMatrix.size(), indicesMatrix.size());
-	vector<vector<string>> indexName_t(indexName.size());
+vector<double> consistencyCheck(vector<double> indicesMatrix,vector<vector<string>>& indexName) {
+	vector<vector<string>> indexName_t(indexName.size()+1);
 	vector<string> tmp;
 	string tt,tt2;
-	int tag = 0, count = 0;
+	int tag = 0, count = 0, n = 0;
 	regex reg("“(.{4,24})”");
 	smatch name_t;
 
@@ -415,6 +476,8 @@ vector<double> consistencyCheck(vector<double> indicesMatrix,vector<vector<strin
 	double CI = 0, CR = 0;
 
 	vector<double> weight_r;
+	if (indicesMatrix.empty() || indexName.empty())
+		return weight_r;
 
 	//保存指标
 	for (int i = 0; i < indexName.size(); i++) {
@@ -437,6 +500,14 @@ vector<double> consistencyCheck(vector<double> indicesMatrix,vector<vector<strin
 			tag = 0;
 		}
 	}
+	for (int ni = 0; ni < indexName_t.size(); ++ni)
+		if (!indexName_t[ni].empty())
+			n++;
+		else
+			break;
+
+	VectorXcd weight(n);
+	MatrixXd judgeMatrix = MatrixXd::Identity(n, n);
 	//生成矩阵
 	for (int i = 0; i < indexName.size(); i++) {
 		count = 0;
@@ -454,23 +525,22 @@ vector<double> consistencyCheck(vector<double> indicesMatrix,vector<vector<strin
 		judgeMatrix(xy[0], xy[1]) = indicesMatrix[i];
 		judgeMatrix(xy[1], xy[0]) = 1.0/indicesMatrix[i];
 	}
-	cout << judgeMatrix << endl;
+	//cout << judgeMatrix << endl;
 
 	//特征分解
 	EigenSolver<MatrixXd> es;
 	es.compute(judgeMatrix, true);
 
 	MatrixXd::Index maxrow;
-	cout << es.eigenvalues().rowwise().norm() << endl;
+	//cout << es.eigenvalues().rowwise().norm() << endl;
 	complex<double> maxRoot = es.eigenvalues().rowwise().norm().maxCoeff(&maxrow);
-	cout << abs(maxRoot) << endl;
+	//cout << abs(maxRoot) << endl;
 	MatrixXcd MRvectors(es.eigenvalues().rows(), 1);
 	for (int mri = 0; mri < es.eigenvectors().rows(); ++mri)
 		MRvectors(mri, 0) = es.eigenvectors()(mri, maxrow);//获取最大特征值的特征向量
 	RI << 0, 0, 0.52, 0.89, 1.12, 1.26, 1.36, 1.41, 1.46, 1.49, 1.52, 1.54, 1.56, 1.58, 1.59;
 
 	if (maxRoot.real() > judgeMatrix.rows() && judgeMatrix.rows() > 2) {
-		cout << judgeMatrix.rows() << endl;
 		CI = (maxRoot.real() - judgeMatrix.rows()) / (judgeMatrix.rows() - 1);
 		CR = CI / RI(judgeMatrix.rows() - 1);
 		if (CR < 0.1)
@@ -481,10 +551,154 @@ vector<double> consistencyCheck(vector<double> indicesMatrix,vector<vector<strin
 	else {
 		weight = MRvectors.array() / (MRvectors.sum() * VectorXd::Ones(judgeMatrix.rows(), 1)).array();
 	}
-
+	//cout << weight << endl;
 	// VectorXd -> vector<double>
 	for (int jt = 0; jt < weight.size(); ++jt)
 		weight_r.push_back(abs(weight(jt)));
 
+	//指标及权重输出调整
+	indexName.clear();
+	indexName.resize(indexName_t.size());
+	count = 0;
+	while (!indexName_t[count].empty() && count<indexName_t.size()) {
+		tmp.assign(indexName_t[count].begin(), indexName_t[count].end());
+		indexName[count].push_back(tmp[0]);
+		count++;
+	}
+	while (indexName.back().empty()) {
+		indexName.pop_back();
+	}
+
 	return weight_r;
+}
+
+
+vector<double> FDM(vector<vector<vector<double>>> indicesData, vector<vector<string>>& indexName) {
+	MatrixXd minMatrix(indicesData.size(), indicesData[0].size());
+	MatrixXd proMatrix(indicesData.size(), indicesData[0].size());
+	MatrixXd maxMatrix(indicesData.size(), indicesData[0].size());
+	MatrixXd x, y, z, ub, lb, Db;
+	double alpha = 0.5, sigma = 0.5;
+	vector<int> Lvn = { 0,3,7,10,11,14,17,20,23,25,28,29,31 };
+	vector<int> MappingTable = { 1,2,3,10,10,10,10,20,20,20,30,11,11,11,12,12,12,13,13,13,14,14,14,21,21,22,22,22,231,31,31 };//各级指标映射表
+
+	vector<double> wt,weight,indicesLv1;
+	vector<vector<double>> indicesLv2(indicesData.size());
+	int count;
+	//第一维是指标
+	//第二维是数据
+
+
+	for (int count = 0; count < Lvn.size()-1; ++count) {
+		//每次初始化矩阵
+		minMatrix = MatrixXd::Zero(indicesData.size(), indicesData[0].size());
+		proMatrix = MatrixXd::Zero(indicesData.size(), indicesData[0].size());
+		maxMatrix = MatrixXd::Zero(indicesData.size(), indicesData[0].size());
+		for (int i = Lvn[count]; i < indicesData.size() && i<Lvn[count+1]; ++i) {
+			for (int j = 0; j < indicesData[i].size(); ++j) {
+				minMatrix(i - Lvn[count], j) = indicesData[i][j][0];
+				proMatrix(i - Lvn[count], j) = indicesData[i][j][1];
+				maxMatrix(i - Lvn[count], j) = indicesData[i][j][2];
+			}
+		}
+		x = minMatrix.rowwise().minCoeff();
+		y = proMatrix.rowwise().prod();
+		for (int yi = 0; yi < y.rows(); ++yi)
+			y(yi, 0) = pow(y(yi, 0), 1.0 / proMatrix.cols());
+		z = maxMatrix.rowwise().maxCoeff();
+		ub = z - alpha * (z - y);
+		lb = x - alpha * (y - x);
+		Db = sigma * ub + (1 - sigma) * lb;
+		Db = Db.array() / (Db.sum() * MatrixXd::Ones(Db.rows(), 1)).array();
+		for (int i = 0; i < Db.rows(); ++i) {
+			if (Db(i) > 0)
+				wt.push_back(Db(i));
+		}
+		
+	}
+
+	//各级指标加权
+	weight.resize(wt.size(), -1);
+	//weight.resize(19);
+	count = 0;
+	for (int it = 0; it < MappingTable.size(); ++it) {
+		if (MappingTable[it] > 0 && MappingTable[it] < 10)
+			indicesLv1.push_back(wt[it]);
+		else if (MappingTable[it] > 0 && MappingTable[it] % 10 == 0)
+			indicesLv2[MappingTable[it] / 10 - 1].push_back(wt[it]);
+		else if (MappingTable[it] > 0 && MappingTable[it] / 10 < 10) {
+			if (indicesLv2[MappingTable[it] / 10 - 1].empty())//二级指标不存在时，默认设为1
+				weight[count++] = (wt[it] * indicesLv1[MappingTable[it] / 10 - 1] * 1);
+			else
+				weight[count++] = (wt[it] * indicesLv1[MappingTable[it] / 10 - 1] * indicesLv2[MappingTable[it] / 10 - 1][MappingTable[it] % 10 - 1]);
+		}
+		else {//一二级指标在，三级指标不在，用三位数标记
+			weight[count++] = 1 * indicesLv1[MappingTable[it] / 100 - 1] * indicesLv2[MappingTable[it] / 100 - 1][MappingTable[it] / 10 % 10 - 1];
+		}
+	}
+
+	while (weight.back() <= 0)
+		weight.pop_back();
+	while (indexName.back().empty()) {
+		indexName.pop_back();
+	}
+	return weight;
+}
+
+
+bool PyCvxpyInputData(
+	//主观评价权重和数据
+	string submethods, 
+	vector<double> subweight, 
+	vector<vector<double>> subindicesData, 
+	//客观评价权重和数据
+	string objmethods,
+	vector<double> objweight,
+	vector<vector<double>> objindicesData,
+	//返回结果
+	vector<vector<double>> &A,
+	vector<double> &b) {
+
+
+	MatrixXd SubMatrix, ObjMatrix, subWeightM, objWeightM, At, bt;
+
+	if (subweight.empty() || subindicesData.empty() || objweight.empty() || objindicesData.empty()) {
+		cout << "Empty Input" << endl;
+		return false;
+	}
+	//一维指标，二维数据
+	if (subweight.size() != subindicesData.size() || objweight.size() != objindicesData.size() || subweight.size() != objweight.size()) {
+		cout << "subjective and objective weight & indicesData is not Aligned!" << endl;
+		return false;
+	}
+	//选取少的数据量进行矩阵行对齐
+	int dataLen = subindicesData[0].size() < objindicesData[0].size() ? subindicesData[0].size() : objindicesData[0].size();
+
+	SubMatrix.resize(dataLen, subindicesData.size());
+	ObjMatrix.resizeLike(SubMatrix);
+	subWeightM.resize(subindicesData.size(), 1);
+	objWeightM.resizeLike(subWeightM);
+	//vector->Matrix
+	for (int i = 0; i < subindicesData.size(); ++i) {
+		subWeightM(i, 0) = subweight[i];
+		objWeightM(i, 0) = objweight[i];
+		for (int j = 0; j < dataLen; ++j) {
+			SubMatrix(i, j) = subindicesData[i][j];
+			ObjMatrix(i, j) = objindicesData[i][j];
+		}
+	}
+
+	subWeightM = (subWeightM.array() / (MatrixXd::Ones(objWeightM.rows(), 1) * subWeightM.colwise().sum()).array()).matrix() ;
+	At = SubMatrix + ObjMatrix;
+	bt = (SubMatrix * subWeightM + ObjMatrix * objWeightM) * MatrixXd::Ones(SubMatrix.cols(), 1);
+	
+	A.resize(dataLen, vector<double>(bt.rows(),0));
+	for (int it = 0; it < bt.rows(); ++it) {//指标
+		b.push_back(bt(it, 0));
+		for (int jt = 0; jt < dataLen; ++jt) {//数据
+			A[jt][it] = At(it, jt);
+		}
+	}
+
+	return true;
 }
