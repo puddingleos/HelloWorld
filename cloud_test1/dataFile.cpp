@@ -126,8 +126,8 @@ bool csvRead(vector<vector<vector<string>>>& indexName_t, vector<vector<vector<d
 
 bool dataReadFiles(vector<vector<vector<string>>>& indexName_t, vector<vector<vector<double>>>& indicesData_t, 
 	vector<vector<double>>& refeData_t, vector<vector<double>>& EMS_t, vector<vector<int>>& dataLength_t) {
-	//string Path = "C:\\Users\\puddingleos\\source\\repos\\MatlabCpp3";
-	string Path = "C:\\Users\\lgd\\source\\repos\\MatlabCpp";
+	string Path = "C:\\Users\\puddingleos\\source\\repos\\MatlabCpp3";
+	//string Path = "C:\\Users\\lgd\\source\\repos\\MatlabCpp";
 	string searchFile = Path;
 	string filename;
 	string filetype = ".dat";
