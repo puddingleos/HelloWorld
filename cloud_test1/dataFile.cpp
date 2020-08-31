@@ -126,8 +126,9 @@ bool csvRead(vector<vector<vector<string>>>& indexName_t, vector<vector<vector<d
 
 bool dataReadFiles(vector<vector<vector<string>>>& indexName_t, vector<vector<vector<double>>>& indicesData_t, 
 	vector<vector<double>>& refeData_t, vector<vector<double>>& EMS_t, vector<vector<int>>& dataLength_t) {
-	string Path = "C:\\Users\\puddingleos\\source\\repos\\MatlabCpp3";
+	//string Path = "C:\\Users\\puddingleos\\source\\repos\\MatlabCpp3";
 	//string Path = "C:\\Users\\lgd\\source\\repos\\MatlabCpp";
+	string Path = "";
 	string searchFile = Path;
 	string filename;
 	string filetype = ".dat";
@@ -485,7 +486,7 @@ bool dataWrite(string filename) {
 
 
 bool dataWrite(string methods, vector<double> weight, vector<vector<string>> indexName, vector<vector<double>> indicesData) {
-	string Path = "C:\\Users\\lgd\\source\\repos\\MatlabCpp\\";
+	string Path = "";//写到当前目录下
 	string filename = methods + "_data.txt";
 	ofstream fid;
 	vector<string> tmp;
@@ -508,40 +509,3 @@ bool dataWrite(string methods, vector<double> weight, vector<vector<string>> ind
 	return true;
 }
 
-
-bool dataWrite(string filename,vector<vector<double>> A,vector<double> b) {
-	
-	ofstream fmsave;
-
-	if (filename.empty() || A.empty() || b.empty())
-		return false;
-
-	fmsave.open(filename, ios::out | ios::trunc);
-	fmsave << "A = " << endl;
-	fmsave << "[";
-	for (int i = 0; i < A.size(); ++i) {
-		fmsave << "[";
-		for (int j = 0; j < A[i].size(); ++j) {
-			if (j < A[i].size() - 1)
-				fmsave << A[i][j] << ",";
-			else
-				fmsave << A[i][j];
-		}
-			
-		fmsave << "]," << endl;
-	}
-	fmsave << "]";
-
-	fmsave << "b=" << endl;
-	fmsave << "[";
-	for (int j = 0; j < b.size(); ++j) {
-		if (j < b.size() - 1)
-			fmsave << b[j] << ",";
-		else
-			fmsave << b[j];
-	}
-		
-	fmsave << "]" << endl;
-	fmsave.close();
-	return true;
-}

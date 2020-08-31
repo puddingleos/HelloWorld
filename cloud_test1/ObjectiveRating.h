@@ -37,4 +37,7 @@ bool PyCvxpyInputData(
 	vector<vector<double>>& A,
 	vector<double>& b);
 
+void polyfit_test(int n, double x[], double y[], int poly_n, double p[]);
+void gauss_solve(int n, double A[], double x[], double b[]);
+
 #endif

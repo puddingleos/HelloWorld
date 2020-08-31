@@ -7,7 +7,7 @@
 #include <numeric>
 #include <Eigen/Eigenvalues>
 #include <Eigen/Dense>
-
+#include <fstream>
 #include "matplotlibcpp.h"
 #include "ObjectiveRating.h"
 #include <regex>
@@ -659,13 +659,25 @@ bool PyCvxpyInputData(
 	vector<vector<double>> &A,
 	vector<double> &b) {
 
-
+	vector<double> subweight_t;
 	MatrixXd SubMatrix, ObjMatrix, subWeightM, objWeightM, At, bt;
-
+	ofstream fmsave;
 	if (subweight.empty() || subindicesData.empty() || objweight.empty() || objindicesData.empty()) {
 		cout << "Empty Input" << endl;
 		return false;
 	}
+	/*
+	* =====================================================================
+	*指标最小二乘方法一：求主客观指标权重与指标数据矩阵的积的最小二乘结果
+	*公式： min SUM[(w-w_sub)*data_sub] + SUM[(w-w_obj)*data_obj]
+	*       s.t.SUM[w]=1 
+	*           w in (0,1)
+	* 实现过程：指标数据对齐（各自选取最短的指数序列作为基准，生成完整的数据矩阵）
+	*           公式化简 A(w-w_sub)+B(w-w_obj)
+	* =====================================================================
+	*/
+
+
 	//一维指标，二维数据
 	if (subweight.size() != subindicesData.size() || objweight.size() != objindicesData.size() || subweight.size() != objweight.size()) {
 		cout << "subjective and objective weight & indicesData is not Aligned!" << endl;
@@ -673,25 +685,79 @@ bool PyCvxpyInputData(
 	}
 	//选取少的数据量进行矩阵行对齐
 	int dataLen = subindicesData[0].size() < objindicesData[0].size() ? subindicesData[0].size() : objindicesData[0].size();
+	fmsave.open("Matrix.txt", ios::out | ios::trunc);//以截断形式打开文件
+	
+	
 
+	/*
+	* 矩阵运算
+	* D_sub*(w-w_sub)+D_obj*(w-w_obj)=(D_sub+D_obj)*w-(D_sub*w_sub+D_obj*w_obj)=At*w-bt
+	* D_sub:subindicesData   D_obj:objindicesData  -（指标数量x数据数量）
+	* w_sub:subweight        w_obj:objweight       -（指标数量x1）
+	*/
 	SubMatrix.resize(dataLen, subindicesData.size());
 	ObjMatrix.resizeLike(SubMatrix);
 	subWeightM.resize(subindicesData.size(), 1);
 	objWeightM.resizeLike(subWeightM);
-	//vector->Matrix
-	for (int i = 0; i < subindicesData.size(); ++i) {
+		//vector->Matrix
+	for (int i = 0; i < subindicesData.size(); ++i) {//指标
 		subWeightM(i, 0) = subweight[i];
 		objWeightM(i, 0) = objweight[i];
-		for (int j = 0; j < dataLen; ++j) {
-			SubMatrix(i, j) = subindicesData[i][j];
-			ObjMatrix(i, j) = objindicesData[i][j];
+		for (int j = 0; j < dataLen; ++j) {//数量
+			SubMatrix(j, i) = subindicesData[i][j];
+			ObjMatrix(j, i) = objindicesData[i][j];
 		}
 	}
-
+	// 主观指标权重归一化（主观权重按照客观指标的数量进行归一化处理）
 	subWeightM = (subWeightM.array() / (MatrixXd::Ones(objWeightM.rows(), 1) * subWeightM.colwise().sum()).array()).matrix() ;
 	At = SubMatrix + ObjMatrix;
-	bt = (SubMatrix * subWeightM + ObjMatrix * objWeightM) * MatrixXd::Ones(SubMatrix.cols(), 1);
-	
+	cout << At << endl;
+	//bt = (SubMatrix * subWeightM + ObjMatrix * objWeightM) * MatrixXd::Ones(SubMatrix.cols(), 1);
+	bt = (SubMatrix * subWeightM + ObjMatrix * objWeightM);
+	cout << bt << endl;
+
+
+	/*
+	* 写入主观权重subweight
+	*/
+	for(int i=0;i<subWeightM.rows();++i)
+		subweight_t.push_back(subWeightM(i,0));
+	fmsave << "subweight = " << endl;
+	fmsave << "[";
+	for (int i = 0; i < subweight_t.size(); ++i)
+		if (i < subweight_t.size() - 1) fmsave << subweight_t[i] << ",";
+		else fmsave << subweight_t[i];
+	fmsave << "]" << endl;
+	//* 写入主观权重数据subindicesData
+	fmsave << "subindicesData = " << endl;
+	fmsave << "[";
+	for (int i = 0; i < subindicesData.size(); ++i) {
+		fmsave << "[";
+		for (int j = 0; j < dataLen; ++j)
+			if (j < dataLen - 1) fmsave << subindicesData[i][j] << ",";
+			else fmsave << subindicesData[i][j];
+		fmsave << "]," << endl;
+	}
+	fmsave << "]" << endl;
+	//* 写入客观权重objweight
+	fmsave << "objweight = " << endl;
+	fmsave << "[";
+	for (int i = 0; i < objweight.size(); ++i)
+		if (i < objweight.size() - 1) fmsave << objweight[i] << ",";
+		else fmsave << objweight[i];
+	fmsave << "]" << endl;
+	//* 写入客观权重数据objindicesData
+	fmsave << "objindicesData = " << endl;
+	fmsave << "[";
+	for (int i = 0; i < objindicesData.size(); ++i) {
+		fmsave << "[";
+		for (int j = 0; j < dataLen; ++j)
+			if (j < dataLen - 1) fmsave << objindicesData[i][j] << ",";
+			else fmsave << objindicesData[i][j];
+		fmsave << "]," << endl;
+	}
+	fmsave << "]" << endl;
+
 	A.resize(dataLen, vector<double>(bt.rows(),0));
 	for (int it = 0; it < bt.rows(); ++it) {//指标
 		b.push_back(bt(it, 0));
@@ -699,6 +765,134 @@ bool PyCvxpyInputData(
 			A[jt][it] = At(it, jt);
 		}
 	}
+	
+	fmsave << "A = " << endl;
+	fmsave << "[";
+	for (int i = 0; i < A.size(); ++i) {
+		fmsave << "[";
+		for (int j = 0; j < A[i].size(); ++j) {
+			if (j < A[i].size() - 1) fmsave << A[i][j] << ",";
+			else fmsave << A[i][j];
+		}
+		fmsave << "]," << endl;
+	}
+	fmsave << "]" << endl;
 
+	fmsave << "b=" << endl;
+	fmsave << "[";
+	for (int j = 0; j < b.size(); ++j) {
+		if (j < b.size() - 1) fmsave << b[j] << ",";
+		else fmsave << b[j];
+	}
+	fmsave << "]" << endl;
+
+	fmsave.close();
 	return true;
+}
+
+
+
+
+
+/*==================polyfit(n,x,y,poly_n,a)===================*/
+/*=======拟合y=a0+a1*x+a2*x^2+……+apoly_n*x^poly_n========*/
+/*=====n是数据个数 xy是数据值 poly_n是多项式的项数======*/
+/*===返回a0,a1,a2,……a[poly_n]，系数比项数多一（常数项）=====*/
+void polyfit_test(int n, double x[], double y[], int poly_n, double p[])
+{
+	int i, j;
+	double* tempx, * tempy, * sumxx, * sumxy, * ata;
+
+	tempx = (double*)calloc(n, sizeof(double));
+	sumxx = (double*)calloc((poly_n * 2 + 1), sizeof(double));
+	tempy = (double*)calloc(n, sizeof(double));
+	sumxy = (double*)calloc((poly_n + 1), sizeof(double));
+	ata = (double*)calloc((poly_n + 1) * (poly_n + 1), sizeof(double));
+	for (i = 0; i < n; i++)
+	{
+		tempx[i] = 1;
+		tempy[i] = y[i];
+	}
+	for (i = 0; i < 2 * poly_n + 1; i++)
+	{
+		for (sumxx[i] = 0, j = 0; j < n; j++)
+		{
+			sumxx[i] += tempx[j];
+			tempx[j] *= x[j];
+		}
+	}
+	// 这一步骤很巧妙的运用了B'*B矩阵为poly_n*poly_n正定矩阵，只有2*poly_n+1个元素不同
+	for (i = 0; i < poly_n + 1; i++)
+	{
+		for (sumxy[i] = 0, j = 0; j < n; j++)
+		{
+			sumxy[i] += tempy[j];
+			tempy[j] *= x[j];
+		}
+	}
+	// 将y向量变化为B'*y向量；
+	for (i = 0; i < poly_n + 1; i++)
+	{
+		for (j = 0; j < poly_n + 1; j++)
+		{
+			ata[i * (poly_n + 1) + j] = sumxx[i + j];
+		}
+	}
+	gauss_solve(poly_n + 1, ata, p, sumxy);
+
+	free(tempx);
+	free(sumxx);
+	free(tempy);
+	free(sumxy);
+	free(ata);
+}
+/*============================================================*/
+////	高斯消元法计算得到	n 次多项式的系数
+////	n: 系数的个数
+////	ata: 线性矩阵
+////	sumxy: 线性方程组的Y值
+////	p: 返回拟合的结果
+/*============================================================*/
+void gauss_solve(int n, double A[], double x[], double b[])
+{
+	int i, j, k, r;
+	double max;
+	for (k = 0; k < n - 1; k++)
+	{
+		max = fabs(A[k * n + k]);					// find maxmum 第一列中最大的元素为
+		r = k;
+		for (i = k + 1; i < n - 1; i++)
+		{
+			if (max < fabs(A[i * n + i]))
+			{
+				max = fabs(A[i * n + i]);
+				r = i;
+			}
+		}
+		if (r != k)
+		{
+			for (i = 0; i < n; i++)		//change array:A[k]&A[r]
+			{
+				max = A[k * n + i];
+				A[k * n + i] = A[r * n + i];
+				A[r * n + i] = max;
+			}
+			max = b[k];                    //change array:b[k]&b[r]
+			b[k] = b[r];
+			b[r] = max;
+		}
+
+		for (i = k + 1; i < n; i++)
+		{
+			for (j = k + 1; j < n; j++)
+				A[i * n + j] -= A[i * n + k] * A[k * n + j] / A[k * n + k];
+			b[i] -= A[i * n + k] * b[k] / A[k * n + k];
+		}
+	}
+
+	for (i = n - 1; i >= 0; x[i] /= A[i * n + i], i--)
+	{
+		for (j = i + 1, x[i] = b[i]; j < n; j++)
+			x[i] -= A[i * n + j] * x[j];
+	}
 }

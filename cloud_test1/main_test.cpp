@@ -4,6 +4,8 @@
 #include <vector>
 #include <complex>
 #include <Eigen/Eigenvalues>
+//#include <windows.h>
+//#include <atlstr.h>
 //#include <pthread.h>
 #include "randnum.h"
 #include "matplotlibcpp.h"
@@ -24,34 +26,26 @@ namespace plt = matplotlibcpp;
 //#define TESTMATPLOTLIB
 //#define SIGPROCESS
 //#define SUBJECTIVE
-#define PYDATA
+//#define PYDATA
 
 
 #define DEBUG
+
+	
 
 int main(int argc, char** argv) {
 
 #ifdef EIGENTEST
 
-	int N, tmp;
-	vector<int> num;
-	vector<int> HashTable(1000, 0);
 
-	while (scanf("%d", &N) != EOF) {
-		for (int i = 0; i < N; ++i) {
-			cin >> tmp;
-			HashTable[tmp] = 1;
-		}
-
-		for (int j = 0; j < 1000; ++j)
-			if (HashTable[j])
-				cout << j << endl;
-		HashTable = vector<int>(1000, 0);
-	}
 
 #endif // TESTOPENCV
 
 #ifdef OBJCTIVE
+
+	//CString strPath;
+	//GetCurrentDirectory(MAX_PATH, strPath.GetBuffer(MAX_PATH));
+	//strPath.ReleaseBuffer();
 
 	//读取文件
 	vector<vector<vector<string>>> IndexName;
@@ -62,8 +56,8 @@ int main(int argc, char** argv) {
 	vector<vector<double>> wEWM, wGRA, wPCA;
 	vector<double> x_t;
 
-	// 写入文件
-	dataWrite();
+	// //写入文件
+	//dataWrite();
 
 	if (!dataReadFiles(IndexName, IndicesData, refeData, EMS, dataLength)) {
 		cout << "Please check filename" << endl;
@@ -77,7 +71,6 @@ int main(int argc, char** argv) {
 		}
 
 		//客观评价方法
-		
 		wEWM.push_back(EntropyWeightMethod(IndicesData[ifiles]));
 		wGRA.push_back(GreyRelationalAnalysis(IndicesData[ifiles]));
 		wPCA.push_back(PrincipleComponentAnalysis(IndicesData[ifiles]));
@@ -91,6 +84,7 @@ int main(int argc, char** argv) {
 		for (vector<double>::size_type ii = 0; ii < wEWM_t.size(); ii++)
 			cout << wEWM_t[ii] << endl;
 #endif
+		// 各指标赋权结果plot
 		//for (int kx = 0; kx < wEWM[ifiles].size(); kx++)
 		//	x_t.push_back(kx + 1.0);
 		////plot hist
@@ -112,7 +106,7 @@ int main(int argc, char** argv) {
 			dataWrite("PCA", wPCA[ifiles], IndexName[ifiles], IndicesData[ifiles]);
 		}
 
-		
+		//各评价方法随着指标数据数量变化情况
 		//plt::named_plot("EntropyWeightMethod", rEWM[ifiles],"*--");
 		//plt::named_plot("GreyRelationalAnalysis", rGRA[ifiles],"*--");
 		//plt::named_plot("PrincipleComponentAnalysis", rPCA[ifiles],"*--");
@@ -123,14 +117,17 @@ int main(int argc, char** argv) {
 
 		//x_t.clear();
 	}
+	// 如果读取多个文件（按照数据长度区分），则画出随数据长度而变化的评价结果变化
+	if (wEWM.size() > 1) {
+		PlotWithDataLength(wEWM, dataLength, IndexName, "Entropy Weight Method");
+		PlotWithDataLength(wGRA, dataLength, IndexName, "Grey Relational Analysis");
+		PlotWithDataLength(wPCA, dataLength, IndexName, "Principle Component Analysis");
 
-	//PlotWithDataLength(wEWM, dataLength, IndexName,"Entropy Weight Method");
-	//PlotWithDataLength(wGRA, dataLength, IndexName, "Grey Relational Analysis");
-	//PlotWithDataLength(wPCA, dataLength, IndexName, "Principle Component Analysis");
-	
-	//PlotWithEMS(wEWM, EMS, dataLength, IndexName, "Entropy Weight Method");
-	//PlotWithEMS(wGRA, EMS, dataLength, IndexName, "Grey Relational Analysis");
-	//PlotWithEMS(wPCA, EMS, dataLength, IndexName, "Principle Component Analysis");
+		PlotWithEMS(wEWM, EMS, dataLength, IndexName, "Entropy Weight Method");
+		PlotWithEMS(wGRA, EMS, dataLength, IndexName, "Grey Relational Analysis");
+		PlotWithEMS(wPCA, EMS, dataLength, IndexName, "Principle Component Analysis");
+	}
+
 
 
 #endif
@@ -157,9 +154,9 @@ int main(int argc, char** argv) {
 		x_label.push_back(i);
 		ss.str("");//stringsteam清空
 	}
-
-	if (dataWrite("AHP", weight1, in_t, indicesData_t[0]))
-		cout << "data write complete!" << endl;
+	////将第一个文件（三个文件分别是AHP、FDM、综合调查的数据）写入AHP_data.txt
+	//if (dataWrite("AHP", weight1, in_t, indicesData_t[0]))
+	//	cout << "data write complete!" << endl;
 
 	plt::bar(x_label, weight1);
 	plt::xticks(x_label, x_tick);
@@ -227,7 +224,7 @@ int main(int argc, char** argv) {
 	}
 	//数据标准化
 	refeSub = vector<double>(indicesData_r[0][0].size(), 6);
-	Range = vector<double>(indicesData_r[0][0].size(), 5);
+	Range = vector<double>(indicesData_r[0][0].size(), 5);//设置数据的范围，默认数据的最小值为0，这里只设置数据的最大值
 	if (!dataMatrixNormalized(indicesData_r[0], refeSub, Range, vector<int>(refeSub.size(), 0))) {
 		cout << "Matrix Normalized failed." << endl;
 		return 0;
@@ -235,10 +232,6 @@ int main(int argc, char** argv) {
 	if (!PyCvxpyInputData("FDM", weight_r[0], indicesData_r[0], "EWM", weight_r[1], indicesData_r[1], A, b)) {
 		cout << "convert failed" << endl;
 	}
-
-	 filename = "C:\\Users\\lgd\\source\\repos\\MatlabCpp\\Matrix.txt";
-	 if (dataWrite(filename, A, b))
-		 cout << "writing successful!!" << endl;
 #endif
 
 
